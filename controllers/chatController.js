@@ -104,7 +104,7 @@ export const handleChat = async (req, res) => {
  */
 export const streamChat = async (req, res) => {
   try {
-    const { message, model = "deepseek" } = req.body;
+    const { message, model = "deepseek-v3.2" } = req.body;
     
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
