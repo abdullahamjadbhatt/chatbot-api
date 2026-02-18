@@ -1,5 +1,11 @@
 import express from 'express';
-import { handleChat, getModels, streamChat } from '../controllers/chatController.js';
+import { 
+  handleChat, 
+  getModels, 
+  streamChat, 
+  getHistory, 
+  deleteHistory 
+} from '../controllers/chatController.js';
 
 const router = express.Router();
 
@@ -35,12 +41,13 @@ router.post('/chat/stream', streamChat);
  * @desc    Get chat history for a session (coming in Week 2 with MongoDB)
  * @access  Public
  */
-router.get('/chat/history/:sessionId', (req, res) => {
-  res.json({ 
-    message: 'MongoDB integration coming in Day 2!',
-    sessionId: req.params.sessionId,
-    note: 'This endpoint will return conversation history once MongoDB is connected'
-  });
-});
+router.get('/chat/history/:sessionId', getHistory);
+
+/**
+ * @route   DELETE /api/chat/history/:sessionId
+ * @desc    Delete chat history for a session (coming in Week 2 with MongoDB)
+ * @access  Public
+ */
+router.delete('/chat/history/:sessionId', deleteHistory);
 
 export default router;

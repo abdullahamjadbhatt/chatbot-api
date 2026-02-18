@@ -1,5 +1,6 @@
-import "colors";
+import 'colors';
 import { generateResponse, AVAILABLE_MODELS, getModelInfo } from '../services/aiService.js';
+import { addMessage, getConversation, deleteConversation } from '../services/conversationService.js';
 
 /**
  * Get list of available models
@@ -19,13 +20,38 @@ export const getModels = async (req, res) => {
 };
 
 /**
+ * Build a conversation history string for context
+ */
+const buildContextPrompt = (messages, currentMessage) => {
+  if (!messages || messages.length === 0) {
+    return currentMessage; // No history, just return the current message
+  }
+
+  // Take last 5 messages for context (to avoid token limits)
+  const recentMessages = messages.slice(-5);
+  
+  // Format the conversation history
+  let contextPrompt = "Previous conversation:\n";
+  
+  recentMessages.forEach(msg => {
+    const role = msg.role === 'user' ? 'User' : 'Assistant';
+    contextPrompt += `${role}: ${msg.content}\n`;
+  });
+  
+  // Add the current message
+  contextPrompt += `User: ${currentMessage}\nAssistant:`;
+  
+  return contextPrompt;
+};
+
+/**
  * Handle chat requests with Hugging Face
  */
 export const handleChat = async (req, res) => {
   const startTime = Date.now();
   
   try {
-    const { message, model = "deepseek-v3.2", sessionId = "anonymous" } = req.body;
+    const { message, model = "deepseek-v3.2", sessionId = `session_${Date.now()}` } = req.body;
     
     // Validation
     if (!message) {
@@ -54,9 +80,29 @@ export const handleChat = async (req, res) => {
     
     console.log(`[${sessionId}] Request: "${message.substring(0, 100)}${message.length > 100 ? '...' : ''}"`.blue);
     console.log(`Using model: ${model} (${AVAILABLE_MODELS[model]})`.blue);
+
+    // Store user message
+    await addMessage(sessionId, 'user', message, model, {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip
+    });
     
-    // Generate AI response
-    const aiResponse = await generateResponse(message, model);
+    // Get conversation history for context
+    const history = await getConversation(sessionId, 10); // Last 10 messages for context
+
+    // Build context-aware prompt
+    const contextualizedMessage = buildContextPrompt(history.messages, message);
+    
+    console.log(`Including ${history.messages.length} previous messages for context`.blue);
+    if (history.messages.length > 0) {
+      console.log(`Context prompt: "${contextualizedMessage.substring(0, 150)}..."`.blue);
+    }
+    
+    // Generate AI response with context
+    const aiResponse = await generateResponse(contextualizedMessage, model);
+
+    // Store AI response
+    await addMessage(sessionId, 'assistant', aiResponse, model);
     
     const responseTime = Date.now() - startTime;
     console.log(`[${sessionId}] Response generated in ${responseTime}ms`.blue);
@@ -79,7 +125,7 @@ export const handleChat = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Chat error:', error.red);
+    console.error('Chat error:', error);
     
     // Determine if it's a known error type
     const statusCode = error.message.includes('API key') ? 401 :
@@ -99,16 +145,18 @@ export const handleChat = async (req, res) => {
 };
 
 /**
- * Streaming version (bonus feature for Week 4)
- * This sends tokens one by one as they arrive
+ * Streaming version (keep from Day 1)
  */
 export const streamChat = async (req, res) => {
   try {
-    const { message, model = "deepseek-v3.2" } = req.body;
+    const { message, model = "deepseek-v3.2", sessionId = `session_${Date.now()}` } = req.body;
     
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
+    
+    // Store user message
+    await addMessage(sessionId, 'user', message, model);
     
     // Set headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
@@ -116,25 +164,75 @@ export const streamChat = async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     
     // Send initial event
-    res.write(`data: ${JSON.stringify({ event: 'start', model })}\n\n`);
+    res.write(`data: ${JSON.stringify({ event: 'start', model, sessionId })}\n\n`);
     
-    // Here you would implement actual streaming with Hugging Face
-    // For now, send a simulated stream
+    // Generate response
     const aiResponse = await generateResponse(message, model);
     const words = aiResponse.split(' ');
     
+    // Stream tokens
     for (const word of words) {
       res.write(`data: ${JSON.stringify({ event: 'token', token: word + ' ' })}\n\n`);
-      // Small delay to simulate streaming
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 30));
     }
     
-    res.write(`data: ${JSON.stringify({ event: 'done' })}\n\n`);
+    // Store AI response
+    await addMessage(sessionId, 'assistant', aiResponse, model);
+    
+    res.write(`data: ${JSON.stringify({ event: 'done', sessionId })}\n\n`);
     res.end();
     
   } catch (error) {
     console.error('Streaming error:', error.red);
     res.write(`data: ${JSON.stringify({ event: 'error', error: error.message })}\n\n`);
     res.end();
+  }
+};
+
+/**
+ * Get conversation history
+ */
+export const getHistory = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const limit = parseInt(req.query.limit) || 50;
+    
+    const history = await getConversation(sessionId, limit);
+    
+    res.json({
+      success: true,
+      ...history
+    });
+    
+  } catch (error) {
+    console.error('History error:', error.red);
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+};
+
+/**
+ * Delete conversation
+ */
+export const deleteHistory = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    const deleted = await deleteConversation(sessionId);
+    
+    if (deleted) {
+      res.json({
+        success: true,
+        message: `Conversation ${sessionId} deleted`
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Delete error:', error.red);
+    res.status(500).json({ error: 'Failed to delete conversation' });
   }
 };
