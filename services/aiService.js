@@ -61,7 +61,6 @@ export const generateResponse = async (message, modelKey = "deepseek-v3.2") => {
 export const AVAILABLE_MODELS = {
   "deepseek-v3.2": "deepseek-ai/DeepSeek-V3.2:cheapest",
   "zai-org/GLM-5": "zai-org/GLM-5:cheapest",
-  "zephyr-7b": "HuggingFaceH4/zephyr-7b-beta:cheapest",
   "mimo-v2-flash": "XiaomiMiMo/MiMo-V2-Flash:cheapest"
 };
 
@@ -72,7 +71,6 @@ export const getModelInfo = (modelKey) => {
   const descriptions = {
     "deepseek-v3.2": "DeepSeek-V3.2 - Efficient Reasoning & Agentic AI",
     "zai-org/GLM-5": "zai.org / GLM-5 - For complex systems engineering and long-horizon agentic tasks",
-    "zephyr-7b": "Zephyr is a series of language models that are trained to act as helpful assistants",
     "mimo-v2-flash": "Xiaomi MiMo-V2-Flash"
   };
   
