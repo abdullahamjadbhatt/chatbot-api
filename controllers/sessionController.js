@@ -1,6 +1,5 @@
 import { getAllSessions, getSessionSummary, deleteOldSessions } from '../services/sessionService.js';
 import Conversation from '../models/conversation.js';
-import { countMessagesTokens } from '../services/tokenCounter.js';
 
 /**
  * List all active sessions
