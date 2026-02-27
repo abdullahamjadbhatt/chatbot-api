@@ -31,8 +31,7 @@ export const generateResponse = async (message, modelKey = "deepseek-v3.2") => {
         { role: "system", content: "You are a helpful, friendly AI assistant." },
         { role: "user", content: message }
       ],
-      max_tokens: 500,
-      temperature: 0.7,
+      temperature: 0.7
     });
     
     const reply = response.choices[0].message.content;
@@ -60,7 +59,7 @@ export const generateResponse = async (message, modelKey = "deepseek-v3.2") => {
  */
 export const AVAILABLE_MODELS = {
   "deepseek-v3.2": "deepseek-ai/DeepSeek-V3.2:cheapest",
-  "zai-org/GLM-5": "zai-org/GLM-5:cheapest",
+  "zai-org/glm-5": "zai-org/GLM-5:cheapest",
   "mimo-v2-flash": "XiaomiMiMo/MiMo-V2-Flash:cheapest"
 };
 
@@ -70,7 +69,7 @@ export const AVAILABLE_MODELS = {
 export const getModelInfo = (modelKey) => {
   const descriptions = {
     "deepseek-v3.2": "DeepSeek-V3.2 - Efficient Reasoning & Agentic AI",
-    "zai-org/GLM-5": "zai.org / GLM-5 - For complex systems engineering and long-horizon agentic tasks",
+    "zai-org/glm-5": "zai.org / GLM-5 - For complex systems engineering and long-horizon agentic tasks",
     "mimo-v2-flash": "Xiaomi MiMo-V2-Flash"
   };
   

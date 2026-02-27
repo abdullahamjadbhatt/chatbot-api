@@ -1,5 +1,5 @@
 import Conversation from '../models/conversation.js';
-import 'colors';
+import "colors";
 
 /**
  * Add a message to a conversation

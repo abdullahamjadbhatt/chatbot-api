@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import chatRoutes from './routes/chatRoutes.js';
+import sessionRoutes from './routes/sessionRoutes.js';
 import { AVAILABLE_MODELS } from './services/aiService.js';
 import { connectDB } from './config/database.js';
 import mongoose from 'mongoose';
@@ -26,18 +27,20 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'Hugging Face Chat API',
     database: 'MongoDB Connected',
-    default_model: 'deepseek-ai/DeepSeek-V3.2:cheapest',
+    default_model: 'deepseek-v3.2',
     available_models: Object.keys(AVAILABLE_MODELS),
     documentation: {
-      chat_endpoint: 'POST /api/chat',
-      history_endpoint: 'GET /api/chat/history/:sessionId',
-      delete_endpoint: 'DELETE /api/chat/history/:sessionId'
+      chat: 'POST /api/chat',
+      history: 'GET /api/chat/history/:sessionId',
+      sessions: 'GET /api/sessions',
+      stats: 'GET /api/stats'
     }
   });
 });
 
 // Routes
 app.use('/api', chatRoutes);
+app.use('/api', sessionRoutes);
 
 // 404 handler
 app.use('/*splat', (req, res) => {
@@ -49,7 +52,12 @@ app.use('/*splat', (req, res) => {
       'GET /api/models',
       'POST /api/chat/stream',
       'GET /api/chat/history/:sessionId',
-      'DELETE /api/chat/history/:sessionId'
+      'DELETE /api/chat/history/:sessionId',
+      'GET /api/sessions',
+      'GET /api/sessions/:sessionId',
+      'DELETE /api/sessions/:sessionId',
+      'POST /api/sessions/cleanup',
+      'GET /api/stats'
     ]
   });
 });
@@ -65,13 +73,15 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log('=================================='.blue);
-  console.log('Hugging Face Chat API'.blue);
-  console.log(`Server: http://localhost:${PORT}`.blue);
-  console.log(`Health: http://localhost:${PORT}/health`.blue);
-  console.log(`Chat:   POST http://localhost:${PORT}/api/chat`.blue);
-  console.log(`History:GET http://localhost:${PORT}/api/chat/history/:sessionId`.blue);
-  console.log(`Models: GET http://localhost:${PORT}/api/models`.blue);
-  console.log('Models available:', Object.keys(AVAILABLE_MODELS).join(', ').blue);
+  console.log('Chat API'.blue);
+  console.log(`Server:\thttp://localhost:${PORT}`.blue);
+  console.log(`Health:\thttp://localhost:${PORT}/health`.blue);
+  console.log(`Chat:\tPOST http://localhost:${PORT}/api/chat`.blue);
+  console.log(`History:\tGET http://localhost:${PORT}/api/chat/history/:sessionId`.blue);
+  console.log(`Sessions:\tGET http://localhost:${PORT}/api/sessions`.blue);
+  console.log(`Stats:\tGET http://localhost:${PORT}/api/stats`.blue);
+  console.log(`Models:\tGET http://localhost:${PORT}/api/models`.blue);
+  // console.log('Models available:\t', Object.keys(AVAILABLE_MODELS).join(', ').blue);
   console.log('=================================='.blue);
 });
 

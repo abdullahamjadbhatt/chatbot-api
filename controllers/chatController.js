@@ -1,6 +1,8 @@
 import 'colors';
 import { generateResponse, AVAILABLE_MODELS, getModelInfo } from '../services/aiService.js';
 import { addMessage, getConversation, deleteConversation } from '../services/conversationService.js';
+import { buildSmartContextPrompt } from '../services/summarizerService.js';
+import { countTokens, getModelLimit } from '../services/tokenCounter.js';
 
 /**
  * Get list of available models
@@ -88,15 +90,20 @@ export const handleChat = async (req, res) => {
     });
     
     // Get conversation history for context
-    const history = await getConversation(sessionId, 10); // Last 10 messages for context
+    const history = await getConversation(sessionId, 50); // Last 10 messages for context
 
-    // Build context-aware prompt
-    const contextualizedMessage = buildContextPrompt(history.messages, message);
+    // Build smart context prompt
+    const contextualizedMessage = await buildSmartContextPrompt(
+      history.messages, 
+      message, 
+      model
+    );
     
-    console.log(`Including ${history.messages.length} previous messages for context`.blue);
-    if (history.messages.length > 0) {
-      console.log(`Context prompt: "${contextualizedMessage.substring(0, 150)}..."`.blue);
-    }
+    // Count tokens for logging
+    const promptTokens = countTokens(contextualizedMessage);
+    const modelLimit = getModelLimit(model);
+    
+    console.log(`Context stats: ${history.messages.length} messages, ~${promptTokens}/${modelLimit} tokens`.blue);
     
     // Generate AI response with context
     const aiResponse = await generateResponse(contextualizedMessage, model);
@@ -107,7 +114,7 @@ export const handleChat = async (req, res) => {
     const responseTime = Date.now() - startTime;
     console.log(`[${sessionId}] Response generated in ${responseTime}ms`.blue);
     
-    // Return response with metadata
+    // Return response with enhanced metadata
     res.json({
       success: true,
       response: aiResponse,
@@ -116,6 +123,13 @@ export const handleChat = async (req, res) => {
         full_id: AVAILABLE_MODELS[model]
       },
       session_id: sessionId,
+      message_count: history.messages.length + 1,
+      context: {
+        messages_used: Math.min(history.messages.length, 50),
+        tokens_used: promptTokens,
+        model_limit: modelLimit,
+        usage_percent: Math.round((promptTokens / modelLimit) * 100)
+      },
       metadata: {
         response_time_ms: responseTime,
         timestamp: new Date().toISOString(),

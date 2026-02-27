@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import {countTokens} from "../services/tokenCounter.js";
 
 // Message schema - embedded approach
 const messageSchema = new mongoose.Schema({
@@ -20,8 +21,16 @@ const messageSchema = new mongoose.Schema({
     default: Date.now
   },
   tokens: {
-    type: Number, // Optional: track token usage
-    default: 0
+    type: Number,
+    default: function() {
+      // Auto-count tokens when message is created
+      return countTokens(this.content);
+    }
+  },
+  metadata: {
+    type: Map,
+    of: String,
+    default: {}
   }
 });
 
@@ -34,7 +43,8 @@ const conversationSchema = new mongoose.Schema({
   },
   userId: {
     type: String,
-    default: 'anonymous'
+    default: 'anonymous',
+    index: true
   },
   messages: [messageSchema], // Embed messages array
   createdAt: {
@@ -45,22 +55,40 @@ const conversationSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  summary: {
+    text: String,
+    lastUpdated: Date,
+    tokenCount: Number
+  },
   metadata: {
     userAgent: String,
     ipAddress: String,
-    totalTokens: Number
+    totalTokens: {
+      type: Number,
+      default: 0
+    }
   }
 });
 
 // Update the updatedAt timestamp before saving
 conversationSchema.pre('save', async function() {
-    this.updatedAt = Date.now();
-    // next();
+  this.updatedAt = Date.now();
+  // next();
+  
+  // Update total tokens
+  if (this.messages && this.messages.length > 0) {
+    this.metadata.totalTokens = this.messages.reduce(
+      (sum, msg) => sum + (msg.tokens || 0), 
+      0
+    );
+  }
 });
 
 // Create indexes for common queries
 conversationSchema.index({ sessionId: 1, updatedAt: -1 });
+conversationSchema.index({ userId: 1, updatedAt: -1 });
 conversationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 }); // Optional: auto-delete after 30 days
+conversationSchema.index({ 'metadata.totalTokens': 1 }); // For analytics
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
 
