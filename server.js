@@ -74,13 +74,13 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log('=================================='.blue);
   console.log('Chat API'.blue);
-  console.log(`Server:\thttp://localhost:${PORT}`.blue);
-  console.log(`Health:\thttp://localhost:${PORT}/health`.blue);
-  console.log(`Chat:\tPOST http://localhost:${PORT}/api/chat`.blue);
-  console.log(`History:\tGET http://localhost:${PORT}/api/chat/history/:sessionId`.blue);
-  console.log(`Sessions:\tGET http://localhost:${PORT}/api/sessions`.blue);
-  console.log(`Stats:\tGET http://localhost:${PORT}/api/stats`.blue);
-  console.log(`Models:\tGET http://localhost:${PORT}/api/models`.blue);
+  console.log(`Server: http://localhost:${PORT}`.blue);
+  console.log(`Health: http://localhost:${PORT}/health`.blue);
+  console.log(`Chat: POST http://localhost:${PORT}/api/chat`.blue);
+  console.log(`History: GET http://localhost:${PORT}/api/chat/history/:sessionId`.blue);
+  console.log(`Sessions: GET http://localhost:${PORT}/api/sessions`.blue);
+  console.log(`Stats: GET http://localhost:${PORT}/api/stats`.blue);
+  console.log(`Models: GET http://localhost:${PORT}/api/models`.blue);
   // console.log('Models available:\t', Object.keys(AVAILABLE_MODELS).join(', ').blue);
   console.log('=================================='.blue);
 });
